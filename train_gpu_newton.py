@@ -39,8 +39,8 @@ X_val_split = Xtrain[val_idx]
 Y_val_split = Ylabel[val_idx]
 print(f"Train: {X_train_split.shape}, {Y_train_split.shape}")
 print(f"Validation: {X_val_split.shape}, {Y_val_split.shape}")
-print(f"Sparsity of X_train: {np.mean(X_train_split == 0) * 100:.2f}%")
-print(f"Sparsity of X_val: {np.mean(X_val_split == 0) * 100:.2f}%")
+print(f"Sparsity of X_train: {torch.mean(X_train_split == 0) * 100:.2f}%")
+print(f"Sparsity of X_val: {torch.mean(X_val_split == 0) * 100:.2f}%")
 print(f'Y_train[:10]: {Y_train_split[:10]}')
 print("Data Loaded.")
 
@@ -49,7 +49,7 @@ for lam_regular in [0.00005, 0.0005, 0.005, 0.05, 0.5]:
     w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=lam_regular)
     val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
     print(f"Validation Loss = {val_loss:.4f}")
-    preds = X_val_split.dot(w) > 0.5
+    preds = (X_val_split @ w) > 0.5
     acc = np.mean(preds == Y_val_split)
     print(f"Validation Accuracy = {acc * 100:.2f}%")
 
@@ -58,7 +58,7 @@ for c in np.linspace(0.3, 2.5, 10):
     w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=0.00005, c=c)
     val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
     print(f"Validation Loss = {val_loss:.4f}")
-    preds = X_val_split.dot(w) > 0.5
+    preds = (X_val_split @ w) > 0.5
     acc = np.mean(preds == Y_val_split)
     print(f"Validation Accuracy = {acc * 100:.2f}%")
 
@@ -74,7 +74,7 @@ val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
 print(f"Validation Loss = {val_loss:.4f}")
 
 # 计算准确率
-preds = X_val_split.dot(w) > 0.5
-acc = np.mean(preds == Y_val_split)
+preds = (X_val_split @ w) > 0.5
+acc = np.mean((preds == Y_val_split).float())
 print(f"Validation Accuracy = {acc * 100:.2f}%")
 
