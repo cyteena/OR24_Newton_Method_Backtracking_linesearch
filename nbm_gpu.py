@@ -1,4 +1,7 @@
 import numpy as np
+import torch
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def exp_y_mulwise_Xw(w, X, y):
     """
@@ -8,7 +11,7 @@ def exp_y_mulwise_Xw(w, X, y):
 
     return exp(y * (X @ w))
     """
-    return np.exp(np.multiply(y, X @ w))
+    return torch.exp(y * X @ w)
 
 def y_mulwise_Xw(w, X, y):
     """
@@ -18,7 +21,7 @@ def y_mulwise_Xw(w, X, y):
 
     return y * (X @ w)
     """
-    return np.multiply(y, X @ w)
+    return y * X @ w
 
 def logistic_loss_and_grad(w, X, y, lam_regular = 0.05, short_cut = None):
     """
@@ -36,10 +39,10 @@ def logistic_loss_and_grad(w, X, y, lam_regular = 0.05, short_cut = None):
         short_cut = y_mulwise_Xw(w, X, y)
     num_samples = X.shape[0]
     z = short_cut
-    preds = np.log((1 + np.exp(-z))) # (num_samples,)
-    loss = np.mean(preds) + lam_regular * np.sum(w ** 2)
+    preds = torch.log((1 + torch.exp(-z))) # (num_samples,)
+    loss = torch.mean(preds) + lam_regular * torch.sum(w ** 2)
 
-    grad = 1 / num_samples * X.T @ (np.divide(y, 1 + np.exp(-z)) - y) + 2 * lam_regular * w # (dim,)
+    grad = 1 / num_samples * X.T @ (torch.divide(y, 1 + torch.exp(-z)) - y) + 2 * lam_regular * w # (dim,)
 
     return loss, grad
 
@@ -65,7 +68,7 @@ def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, gamma = 0.6,
         new_loss, _ = logistic_loss_and_grad(w + t * direction, X, y)
         if loss - new_loss < 0.005:
             c *= 1.1
-        if new_loss <= loss + c * t * np.dot(direction, grad) or loss - new_loss > 0.0005:
+        if new_loss <= loss + c * t * torch.dot(direction, grad) or loss - new_loss > 0.0005:
             break
         t *= gamma
 
@@ -89,9 +92,9 @@ def Newton_method_find_direction(w, X, y, grad, lam_regular = 0.05, exp_short_cu
     if exp_short_cut is None:
         exp_short_cut = exp_y_mulwise_Xw(w, X, y)
 
-    D = np.diag((y ** 2) * exp_short_cut / ((1 + exp_short_cut) ** 2))
-    Hessian = 1 / num_samples * X.T @ D @ X + 2 * lam_regular * np.eye(X.shape[1]) # Great idea
-    return -np.linalg.solve(Hessian, grad)
+    D = torch.diag((y ** 2) * exp_short_cut / ((1 + exp_short_cut) ** 2))
+    Hessian = 1 / num_samples * (X.T @ D @ X) + 2 * lam_regular * torch.eye(X.shape[1], device = device) # Great idea
+    return -torch.linalg.solve(Hessian, grad)
 
 
 def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_regular = 0.05, c = 0.5):
@@ -110,17 +113,17 @@ def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_r
     4. update w(x_0) -> w(x_1) = w(x_0) + t * direction
     5. repeat 1-4 until the stopping criteria is satisfied
     """
-    w = np.zeros(X.shape[1])
+    w = torch.zeros(X.shape[1], device = device, dtype = torch.float32)
     step_size = 0.5
 
     for i in range(max_iter):
         short_cut = y_mulwise_Xw(w, X, y)
         loss, grad = logistic_loss_and_grad(w, X, y, lam_regular, short_cut=short_cut)
-        direction = Newton_method_find_direction(w, X, y, grad, lam_regular, exp_short_cut=np.exp(short_cut))
+        direction = Newton_method_find_direction(w, X, y, grad, lam_regular, exp_short_cut=torch.exp(short_cut))
         step_size = backtracking_line_search(w, direction, X, y, short_cut=short_cut, alpha_step = step_size, c = c) # step_size find here garantee the Armijo condition (strictly decreasing)
         w_new = w + step_size * direction
 
-        if np.linalg.norm(w_new - w) < tol:
+        if torch.norm(w_new - w) < tol:
             w = w_new
             break
 

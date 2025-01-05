@@ -1,10 +1,9 @@
 import numpy as np
 from scipy.sparse import lil_matrix, vstack
 from tqdm import tqdm
+import torch
 
-##############################################################################
-# 第一步：读取 a9a 数据
-##############################################################################
+# 读取 a9a 数据
 file_name = 'a9a.txt'
 is_sparse = 1
 feat = 123
@@ -80,64 +79,11 @@ if is_sparse:
 Xtrain = np.array(Xtrain, dtype=np.float32)
 Ylabel = np.array(Ylabel, dtype=np.float32)
 
-##############################################################################
-# 第二步：定义逻辑回归与回溯搜索
-##############################################################################
-def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
+# 将数据移动到 GPU 上
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+Xtrain = torch.tensor(Xtrain, device=device)
+Ylabel = torch.tensor(Ylabel, device=device)
 
-def logistic_loss_and_grad(w, X, y):
-    """
-    w: 参数向量 (dim,)
-    X: 数据矩阵 (num_samples, dim)
-    y: 标签 (num_samples,)
-    """
-    m = X.shape[0]
-    z = X.dot(w)
-    preds = sigmoid(z)
-    # 损失函数: -1/m * sum[ y*log(preds) + (1-y)*log(1-preds) ]
-    # 为了避免log(0)，加一个很小的数1e-9
-    loss = -np.mean(y * np.log(preds + 1e-9) + (1 - y) * np.log(1 - preds + 1e-9))
-    # 梯度: 1/m * X^T (preds - y)
-    grad = (1 / m) * X.T.dot(preds - y)
-    return loss, grad
-
-def backtracking_line_search(w, grad, X, y, alpha=0.4, beta=0.8):
-    """
-    使用回溯搜索确定合适的学习率
-    """
-    t = 1.0
-    loss, _ = logistic_loss_and_grad(w, X, y)
-    # Armijo 条件
-    while True:
-        new_loss, _ = logistic_loss_and_grad(w - t * grad, X, y)
-        if new_loss <= loss - alpha * t * np.dot(grad, grad):  
-            break
-        t *= beta
-    return t
-
-def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6):
-    """
-    使用带回溯搜索的梯度下降训练逻辑回归
-    """
-    w = np.zeros(X.shape[1])
-    for i in range(max_iter):
-        loss, grad = logistic_loss_and_grad(w, X, y)
-        step_size = backtracking_line_search(w, grad, X, y)
-        w_new = w - step_size * grad
-        
-        if np.linalg.norm(w_new - w) < tol:
-            w = w_new
-            break
-        w = w_new
-        
-        if i % 50 == 0:
-            print(f"Iter {i}, loss = {loss:.4f}")
-    return w
-
-##############################################################################
-# 第三步：训练并测试
-##############################################################################
 # 划分训练集和验证集（90% vs 10%）
 indices = np.arange(Xtrain.shape[0])
 np.random.shuffle(indices)
@@ -150,17 +96,61 @@ Y_train_split = Ylabel[train_idx]
 X_val_split = Xtrain[val_idx]
 Y_val_split = Ylabel[val_idx]
 
+print(f"Train: {X_train_split.shape}, {Y_train_split.shape}")
+print(f"Validation: {X_val_split.shape}, {Y_val_split.shape}")
+print(f"Sparsity of X_train: {np.mean(X_train_split.cpu().numpy() == 0) * 100:.2f}%")
+print(f"Sparsity of X_val: {np.mean(X_val_split.cpu().numpy() == 0) * 100:.2f}%")
+print(f'Y_train[:10]: {Y_train_split[:10]}')
+print("Data Loaded.")
+
+def sigmoid(z):
+    return 1 / (1 + torch.exp(-z))
+
+def logistic_loss_and_grad(w, X, y, lam_regular=0.0):
+    num_samples = X.shape[0]
+    z = X @ w
+    preds = sigmoid(z)
+    loss = -torch.mean(y * torch.log(preds + 1e-9) + (1 - y) * torch.log(1 - preds + 1e-9)) + lam_regular * torch.sum(w ** 2)
+    grad = (1 / num_samples) * X.T @ (preds - y) + 2 * lam_regular * w
+    return loss, grad
+
+def backtracking_line_search(w, grad, X, y, alpha=0.4, beta=0.8):
+    t = 1.0
+    loss, _ = logistic_loss_and_grad(w, X, y)
+    while True:
+        new_loss, _ = logistic_loss_and_grad(w - t * grad, X, y)
+        if new_loss <= loss - alpha * t * torch.dot(grad, grad):
+            break
+        t *= beta
+    return t
+
+def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6, lam_regular=0.0):
+    w = torch.zeros(X.shape[1], device=device, dtype=torch.float32)
+    for i in range(max_iter):
+        loss, grad = logistic_loss_and_grad(w, X, y, lam_regular)
+        step_size = backtracking_line_search(w, grad, X, y)
+        w_new = w - step_size * grad
+        
+        if torch.norm(w_new - w) < tol:
+            w = w_new
+            break
+        w = w_new
+        
+        if i % 50 == 0:
+            print(f"Iter {i}, loss = {loss.item():.4f}")
+    return w
+
 # 训练
 print("Start Training (Backtracking Logistic Regression)...")
-w = logistic_regression_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6)
+w = logistic_regression_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=0.00005)
 print("Training Completed.")
 print("Learned Parameters:", w)
 
 # 验证集上的loss
 val_loss, _ = logistic_loss_and_grad(w, X_val_split, Y_val_split)
-print(f"Validation Loss = {val_loss:.4f}")
+print(f"Validation Loss = {val_loss.item():.4f}")
 
 # 计算准确率
-preds = X_val_split.dot(w) > 0.0
-acc = np.mean(preds == Y_val_split)
-print(f"Validation Accuracy = {acc * 100:.2f}%")
+preds = sigmoid(X_val_split @ w) > 0.5
+acc = torch.mean((preds == Y_val_split).float())
+print(f"Validation Accuracy = {acc.item() * 100:.2f}%")
