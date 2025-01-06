@@ -1,6 +1,136 @@
 import json
 import torch
-from example_backtracking_gd import logistic_loss_and_grad, sigmoid
+from scipy.sparse import lil_matrix, vstack
+from tqdm import tqdm
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def parse_line(line, change_label = False):
+    parts = line.strip().split()
+    label = int(parts[0])
+    if change_label:
+        # 将标签从 -1 转换为 0
+        label = 0 if label == -1 else 1
+    indices = []
+    values = []
+    for item in parts[1:]:
+        index, value = item.split(':')
+        indices.append(int(index))
+        values.append(float(value))
+    return label, indices, values
+
+def load_data(filepath, feat, is_sparse=True, batch_size=1000, change_label = False):
+    if is_sparse:
+        Xtrain = lil_matrix((0, feat))
+    else:
+        Xtrain = torch.zeros((0, feat))
+    
+    Ylabel = []
+    batch_X = []
+    batch_Y = []
+
+    with open(filepath, 'r') as fid:
+        for line in tqdm(fid, desc="Reading data"):
+            label, indices, values = parse_line(line, change_label)
+            batch_Y.append(label)
+            
+            if is_sparse:
+                new_row = lil_matrix((1, feat))
+                for idx, val in zip(indices, values):
+                    if 0 <= idx < feat:
+                        new_row[0, idx] = val
+                batch_X.append(new_row)
+            else:
+                new_row = torch.zeros((1, feat))
+                for idx, val in zip(indices, values):
+                    if 0 <= idx < feat:
+                        new_row[0, idx] = val
+                batch_X.append(new_row)
+            
+            if len(batch_X) >= batch_size:
+                if is_sparse:
+                    Xtrain = vstack([Xtrain] + batch_X)
+                else:
+                    Xtrain = torch.cat([Xtrain] + batch_X, dim=0)
+                Ylabel.extend(batch_Y)
+                batch_X = []
+                batch_Y = []
+
+    if batch_X:
+        if is_sparse:
+            Xtrain = vstack([Xtrain] + batch_X)
+        else:
+            Xtrain = torch.cat([Xtrain] + batch_X, dim=0)
+        Ylabel.extend(batch_Y)
+
+    return Xtrain, Ylabel
+
+################################################################################
+
+def sigmoid(z):
+    return 1 / (1 + torch.exp(-z))
+
+def logistic_loss_and_grad(w, X, y):
+    """
+    w: 参数向量 (dim,)
+    X: 数据矩阵 (num_samples, dim)
+    y: 标签 (num_samples,)
+    """
+    m = X.shape[0]
+    z = X.matmul(w)
+    preds = sigmoid(z)
+    # 损失函数: -1/m * sum[ y*log(preds) + (1-y)*log(1-preds) ]
+    # 为了避免log(0)，加一个很小的数1e-9
+    loss = -torch.mean(y * torch.log(preds + 1e-9) + (1 - y) * torch.log(1 - preds + 1e-9))
+    # 梯度: 1/m * X^T (preds - y)
+    grad = (1 / m) * X.t().matmul(preds - y)
+    return loss, grad
+
+def backtracking_line_search(w, grad, X, y, alpha=0.4, beta=0.8):
+    """
+    使用回溯搜索确定合适的学习率
+    """
+    t = 1.0
+    loss, _ = logistic_loss_and_grad(w, X, y)
+    # Armijo 条件
+    while True:
+        new_loss, _ = logistic_loss_and_grad(w - t * grad, X, y)
+        if new_loss <= loss - alpha * t * torch.dot(grad, grad):  
+            break
+        t *= beta
+    return t
+
+def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6, alpha = 0.4, beta = 0.8, gradient_end = False, train_losses = [], grad_norms = []):
+    """
+    使用带回溯搜索的梯度下降训练逻辑回归
+    """
+    w = torch.zeros(X.shape[1], dtype=torch.float32, device=device)
+    end_iter = None
+    for i in range(max_iter):
+        loss, grad = logistic_loss_and_grad(w, X, y)
+        train_losses.append(loss.item())
+        grad_norms.append(torch.norm(grad).item())
+        step_size = backtracking_line_search(w, grad, X, y, alpha=alpha, beta=beta)
+        w_new = w - step_size * grad
+        if not gradient_end:
+            if torch.norm(w_new - w) < tol:
+                w = w_new
+                end_iter = i
+                break
+        else: 
+            if torch.norm(grad) < tol:
+                w = w_new
+                end_iter = i
+                break
+        w = w_new
+        
+        if i % 50 == 0:
+            print(f"Iter {i}, loss = {loss:.4f}")
+        if not end_iter:
+            end_iter = max_iter
+    return w, end_iter
+
+################################################################################
 
 def save_results_to_json(w, X_train, Y_train, X_val, Y_val, iterations, filename="result.json"):
     # 训练集上的loss

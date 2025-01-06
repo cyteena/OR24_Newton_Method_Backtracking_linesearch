@@ -1,0 +1,14 @@
+[
+    {
+        "validation_accuracy": 84.52563285827637,
+        "iterations": 1000,
+        "train_loss": 0.32408538460731506,
+        "val_loss": 0.32406800985336304
+    },
+    {
+        "validation_accuracy": 85.508131980896,
+        "iterations": 1000,
+        "train_loss": 0.3246197998523712,
+        "val_loss": 0.31930726766586304
+    }
+]
