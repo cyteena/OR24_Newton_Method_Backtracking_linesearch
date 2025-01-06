@@ -9,11 +9,12 @@ batch_size = 32
 
 filepath = './' + file_name
 
-def parse_line(line):
+def parse_line(line, change_label = False):
     parts = line.strip().split()
     label = int(parts[0])
-    # 将标签从 -1 转换为 0
-    label = 0 if label == -1 else 1
+    if change_label:
+        # 将标签从 -1 转换为 0
+        label = 0 if label == -1 else 1
     indices = []
     values = []
     for item in parts[1:]:
@@ -22,7 +23,7 @@ def parse_line(line):
         values.append(float(value))
     return label, indices, values
 
-def load_data(filepath, feat, is_sparse=True, batch_size=1000):
+def load_data(filepath, feat, is_sparse=True, batch_size=1000, change_label = False):
     if is_sparse:
         Xtrain = lil_matrix((0, feat))
     else:
@@ -34,7 +35,7 @@ def load_data(filepath, feat, is_sparse=True, batch_size=1000):
 
     with open(filepath, 'r') as fid:
         for line in tqdm(fid, desc="Reading data"):
-            label, indices, values = parse_line(line)
+            label, indices, values = parse_line(line, change_label)
             batch_Y.append(label)
             
             if is_sparse:

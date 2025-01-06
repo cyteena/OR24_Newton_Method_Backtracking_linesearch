@@ -39,8 +39,8 @@ X_val_split = Xtrain[val_idx]
 Y_val_split = Ylabel[val_idx]
 print(f"Train: {X_train_split.shape}, {Y_train_split.shape}")
 print(f"Validation: {X_val_split.shape}, {Y_val_split.shape}")
-print(f"Sparsity of X_train: {torch.mean(X_train_split == 0) * 100:.2f}%")
-print(f"Sparsity of X_val: {torch.mean(X_val_split == 0) * 100:.2f}%")
+print(f"Sparsity of X_train: {torch.mean((X_train_split == 0).float()) * 100:.2f}%")
+print(f"Sparsity of X_val: {torch.mean((X_val_split == 0).float()) * 100:.2f}%")
 print(f'Y_train[:10]: {Y_train_split[:10]}')
 print("Data Loaded.")
 

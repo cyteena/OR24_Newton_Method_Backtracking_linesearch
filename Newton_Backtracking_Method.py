@@ -43,7 +43,7 @@ def logistic_loss_and_grad(w, X, y, lam_regular = 0.05, short_cut = None):
 
     return loss, grad
 
-def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, gamma = 0.6, c = 0.5, short_cut = None):
+def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, gamma = 0.6, c = 0.5, short_cut = None, adaptive_c = True):
     """
     alpha_step: initial step size
     gamma: step size shrinkage factor (use this to find the smallest number t such that the Armijo condition is satisfied)
@@ -61,13 +61,21 @@ def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, gamma = 0.6,
     """
     t = alpha_step
     loss, grad = logistic_loss_and_grad(w, X, y, short_cut=short_cut)
-    while True:
-        new_loss, _ = logistic_loss_and_grad(w + t * direction, X, y)
-        if loss - new_loss < 0.005:
-            c *= 1.1
-        if new_loss <= loss + c * t * np.dot(direction, grad) or loss - new_loss > 0.0005:
-            break
-        t *= gamma
+    if adaptive_c is True:
+        while True:
+            new_loss, _ = logistic_loss_and_grad(w + t * direction, X, y)
+            if loss - new_loss < 0.005:
+                c *= 1.1
+            if new_loss <= loss + c * t * np.dot(direction, grad) or loss - new_loss > 0.0005:
+                break
+            t *= gamma
+    
+    else:
+        while True:
+            new_loss, _ = logistic_loss_and_grad(w + t * direction, X, y)
+            if new_loss <= loss + c * t * np.dot(direction, grad):
+                break
+            t *= gamma
 
     return t
 
@@ -94,7 +102,7 @@ def Newton_method_find_direction(w, X, y, grad, lam_regular = 0.05, exp_short_cu
     return -np.linalg.solve(Hessian, grad)
 
 
-def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_regular = 0.05, c = 0.5):
+def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_regular = 0.000005, c = 2, apdative_c = False):
     """
     X: data matrix (num_samples, dim)
     y: label (num_samples,)
@@ -117,7 +125,7 @@ def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_r
         short_cut = y_mulwise_Xw(w, X, y)
         loss, grad = logistic_loss_and_grad(w, X, y, lam_regular, short_cut=short_cut)
         direction = Newton_method_find_direction(w, X, y, grad, lam_regular, exp_short_cut=np.exp(short_cut))
-        step_size = backtracking_line_search(w, direction, X, y, short_cut=short_cut, alpha_step = step_size, c = c) # step_size find here garantee the Armijo condition (strictly decreasing)
+        step_size = backtracking_line_search(w, direction, X, y, short_cut=short_cut, alpha_step = step_size, c = c, adaptive_c = apdative_c) # step_size find here garantee the Armijo condition (strictly decreasing)
         w_new = w + step_size * direction
 
         if np.linalg.norm(w_new - w) < tol:
