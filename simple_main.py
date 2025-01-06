@@ -9,7 +9,7 @@ batch_size = 32
 
 filepath = './' + file_name
 
-Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size, change_label=False)
+Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size, change_label=True)
 
 # 若是稀疏矩阵，需要转化为稠密矩阵
 if is_sparse:

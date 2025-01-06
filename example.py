@@ -1,6 +1,9 @@
-import numpy as np
+import torch
 from scipy.sparse import lil_matrix, vstack
 from tqdm import tqdm
+
+# 设置设备为 GPU，如果可用的话
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ##############################################################################
 # 第一步：读取 a9a 数据
@@ -12,11 +15,12 @@ batch_size = 32
 
 filepath = './' + file_name
 
-def parse_line(line):
+def parse_line(line, change_label = False):
     parts = line.strip().split()
     label = int(parts[0])
-    # 将标签从 -1 转换为 0
-    label = 0 if label == -1 else 1
+    if change_label:
+        # 将标签从 -1 转换为 0
+        label = 0 if label == -1 else 1
     indices = []
     values = []
     for item in parts[1:]:
@@ -25,11 +29,11 @@ def parse_line(line):
         values.append(float(value))
     return label, indices, values
 
-def load_data(filepath, feat, is_sparse=True, batch_size=1000):
+def load_data(filepath, feat, is_sparse=True, batch_size=1000, change_label = False):
     if is_sparse:
         Xtrain = lil_matrix((0, feat))
     else:
-        Xtrain = np.zeros((0, feat))
+        Xtrain = torch.zeros((0, feat))
     
     Ylabel = []
     batch_X = []
@@ -37,7 +41,7 @@ def load_data(filepath, feat, is_sparse=True, batch_size=1000):
 
     with open(filepath, 'r') as fid:
         for line in tqdm(fid, desc="Reading data"):
-            label, indices, values = parse_line(line)
+            label, indices, values = parse_line(line, change_label)
             batch_Y.append(label)
             
             if is_sparse:
@@ -47,7 +51,7 @@ def load_data(filepath, feat, is_sparse=True, batch_size=1000):
                         new_row[0, idx] = val
                 batch_X.append(new_row)
             else:
-                new_row = np.zeros((1, feat))
+                new_row = torch.zeros((1, feat))
                 for idx, val in zip(indices, values):
                     if 0 <= idx < feat:
                         new_row[0, idx] = val
@@ -57,7 +61,7 @@ def load_data(filepath, feat, is_sparse=True, batch_size=1000):
                 if is_sparse:
                     Xtrain = vstack([Xtrain] + batch_X)
                 else:
-                    Xtrain = np.vstack([Xtrain] + batch_X)
+                    Xtrain = torch.cat([Xtrain] + batch_X, dim=0)
                 Ylabel.extend(batch_Y)
                 batch_X = []
                 batch_Y = []
@@ -66,25 +70,30 @@ def load_data(filepath, feat, is_sparse=True, batch_size=1000):
         if is_sparse:
             Xtrain = vstack([Xtrain] + batch_X)
         else:
-            Xtrain = np.vstack([Xtrain] + batch_X)
+            Xtrain = torch.cat([Xtrain] + batch_X, dim=0)
         Ylabel.extend(batch_Y)
 
     return Xtrain, Ylabel
 
-Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size)
+Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size, change_label=True)
 
 # 若是稀疏矩阵，需要转化为稠密矩阵
 if is_sparse:
-    Xtrain = Xtrain.toarray()
+    Xtrain = torch.tensor(Xtrain.toarray(), dtype=torch.float32)
+else:
+    Xtrain = torch.tensor(Xtrain, dtype=torch.float32)
 
-Xtrain = np.array(Xtrain, dtype=np.float32)
-Ylabel = np.array(Ylabel, dtype=np.float32)
+Ylabel = torch.tensor(Ylabel, dtype=torch.float32)
+
+# 将数据移动到 GPU
+Xtrain = Xtrain.to(device)
+Ylabel = Ylabel.to(device)
 
 ##############################################################################
 # 第二步：定义逻辑回归与回溯搜索
 ##############################################################################
 def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
+    return 1 / (1 + torch.exp(-z))
 
 def logistic_loss_and_grad(w, X, y):
     """
@@ -93,13 +102,13 @@ def logistic_loss_and_grad(w, X, y):
     y: 标签 (num_samples,)
     """
     m = X.shape[0]
-    z = X.dot(w)
+    z = X.matmul(w)
     preds = sigmoid(z)
     # 损失函数: -1/m * sum[ y*log(preds) + (1-y)*log(1-preds) ]
     # 为了避免log(0)，加一个很小的数1e-9
-    loss = -np.mean(y * np.log(preds + 1e-9) + (1 - y) * np.log(1 - preds + 1e-9))
+    loss = -torch.mean(y * torch.log(preds + 1e-9) + (1 - y) * torch.log(1 - preds + 1e-9))
     # 梯度: 1/m * X^T (preds - y)
-    grad = (1 / m) * X.T.dot(preds - y)
+    grad = (1 / m) * X.t().matmul(preds - y)
     return loss, grad
 
 def backtracking_line_search(w, grad, X, y, alpha=0.4, beta=0.8):
@@ -111,7 +120,7 @@ def backtracking_line_search(w, grad, X, y, alpha=0.4, beta=0.8):
     # Armijo 条件
     while True:
         new_loss, _ = logistic_loss_and_grad(w - t * grad, X, y)
-        if new_loss <= loss - alpha * t * np.dot(grad, grad):  
+        if new_loss <= loss - alpha * t * torch.dot(grad, grad):  
             break
         t *= beta
     return t
@@ -120,13 +129,13 @@ def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6):
     """
     使用带回溯搜索的梯度下降训练逻辑回归
     """
-    w = np.zeros(X.shape[1])
+    w = torch.zeros(X.shape[1], dtype=torch.float32, device=device)
     for i in range(max_iter):
         loss, grad = logistic_loss_and_grad(w, X, y)
         step_size = backtracking_line_search(w, grad, X, y)
         w_new = w - step_size * grad
         
-        if np.linalg.norm(w_new - w) < tol:
+        if torch.norm(w_new - w) < tol:
             w = w_new
             break
         w = w_new
@@ -139,8 +148,7 @@ def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6):
 # 第三步：训练并测试
 ##############################################################################
 # 划分训练集和验证集（90% vs 10%）
-indices = np.arange(Xtrain.shape[0])
-np.random.shuffle(indices)
+indices = torch.randperm(Xtrain.shape[0])
 num_train = int(0.9 * len(indices))
 train_idx = indices[:num_train]
 val_idx = indices[num_train:]
@@ -152,7 +160,7 @@ Y_val_split = Ylabel[val_idx]
 
 # 训练
 print("Start Training (Backtracking Logistic Regression)...")
-w = logistic_regression_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6)
+w = logistic_regression_backtracking(X_train_split, Y_train_split, max_iter=10000, tol=1e-6)
 print("Training Completed.")
 print("Learned Parameters:", w)
 
@@ -161,6 +169,6 @@ val_loss, _ = logistic_loss_and_grad(w, X_val_split, Y_val_split)
 print(f"Validation Loss = {val_loss:.4f}")
 
 # 计算准确率
-preds = sigmoid(X_val_split.dot(w)) > 0.5
-acc = np.mean(preds == Y_val_split)
+preds = sigmoid(X_val_split.matmul(w)) > 0.5
+acc = torch.mean((preds == Y_val_split).float())
 print(f"Validation Accuracy = {acc * 100:.2f}%")
