@@ -1,5 +1,6 @@
 from data_a9a_load import load_data
 import numpy as np
+import torch
 from Newton_Backtracking_Method import logistic_loss_and_grad, logistic_regression_newton_backtracking, sigmoid
 
 file_name = 'a9a.txt'
@@ -43,5 +44,5 @@ print(f"Validation Loss = {val_loss:.4f}")
 
 # 计算准确率
 preds = sigmoid(X_val_split @ w) > 0.5
-acc = np.mean(preds == Y_val_split)
+acc = torch.mean((preds == Y_val_split).float())
 print(f"Validation Accuracy = {acc * 100:.2f}%")
