@@ -44,24 +44,51 @@ print(f"Sparsity of X_val: {torch.mean((X_val_split == 0).float()) * 100:.2f}%")
 print(f'Y_train[:10]: {Y_train_split[:10]}')
 print("Data Loaded.")
 
-# for lam_regular in [0.00005, 0.0005, 0.005, 0.05, 0.5]:
-#     print(f"Regularization Parameter: {lam_regular}")
-#     w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=lam_regular)
-#     val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
-#     print(f"Validation Loss = {val_loss:.4f}")
-#     preds = (X_val_split @ w) > 0.5
-#     acc = torch.mean((preds == Y_val_split).float())
-#     print(f"Validation Accuracy = {acc * 100:.2f}%")
+for lam_regular in np.linspace(1e-5, 0.0001, 20):
+    print(f"Regularization Parameter: {lam_regular}")
+    w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=lam_regular, c = 2, adaptive_c = False)
+    val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
+    print(f"Validation Loss = {val_loss:.4f}")
+    preds = (X_val_split @ w) > 0.5
+    acc = torch.mean((preds == Y_val_split).float())
+    print(f"Validation Accuracy = {acc * 100:.2f}%")
 
-# for c in np.linspace(0.3, 2.5, 10):
-#     print(f"Constant for Armijo Condition: {c}")
-#     w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=0.00005, c=c)
-#     val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
-#     print(f"Validation Loss = {val_loss:.4f}")
-#     preds = (X_val_split @ w) > 0.5
-#     acc = torch.mean((preds == Y_val_split).float())
-#     print(f"Validation Accuracy = {acc * 100:.2f}%")
+for c in np.linspace(1, 3, 20):
+    print(f"Constant for Armijo Condition: {c}")
+    w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=0.00005, c = 2, adaptive_c = False)
+    val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
+    print(f"Validation Loss = {val_loss:.4f}")
+    preds = (X_val_split @ w) > 0.5
+    acc = torch.mean((preds == Y_val_split).float())
+    print(f"Validation Accuracy = {acc * 100:.2f}%")
 
+def find_best_params(X_train_split, Y_train_split, X_val_split, Y_val_split):
+    best_params = {'lam_regular': None, 'c': None}
+    best_val_loss = float('inf')
+    best_acc = 0
+
+    for lam_regular in np.linspace(1e-5, 0.0001, 20):
+        for c in np.linspace(1, 3, 20):
+            print(f"Testing lam_regular: {lam_regular}, c: {c}")
+            w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=lam_regular, c=c, adaptive_c=False)
+            val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
+            preds = (X_val_split @ w) > 0.5
+            acc = torch.mean((preds == Y_val_split).float())
+            
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                best_acc = acc
+                best_params['lam_regular'] = lam_regular
+                best_params['c'] = c
+
+            print(f"Validation Loss = {val_loss:.4f}, Validation Accuracy = {acc * 100:.2f}%")
+
+    print(f"Best Parameters: lam_regular = {best_params['lam_regular']}, c = {best_params['c']}")
+    print(f"Best Validation Loss = {best_val_loss:.4f}, Best Validation Accuracy = {best_acc * 100:.2f}%")
+    return best_params
+
+# 调用函数以找到最佳参数
+best_params = find_best_params(X_train_split, Y_train_split, X_val_split, Y_val_split)
 
 # 训练
 print("Start Training (Backtracking Logistic Regression)...")
