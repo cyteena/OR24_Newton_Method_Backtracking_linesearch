@@ -125,7 +125,7 @@ def backtracking_line_search(w, grad, X, y, alpha=0.4, beta=0.8):
         t *= beta
     return t
 
-def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6):
+def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6, gradient_end = False):
     """
     使用带回溯搜索的梯度下降训练逻辑回归
     """
@@ -134,10 +134,14 @@ def logistic_regression_backtracking(X, y, max_iter=1000, tol=1e-6):
         loss, grad = logistic_loss_and_grad(w, X, y)
         step_size = backtracking_line_search(w, grad, X, y)
         w_new = w - step_size * grad
-        
-        if torch.norm(w_new - w) < tol:
-            w = w_new
-            break
+        if not gradient_end:
+            if torch.norm(w_new - w) < tol:
+                w = w_new
+                break
+        else: 
+            if torch.norm(grad) < tol:
+                w = w_new
+                break
         w = w_new
         
         if i % 50 == 0:
