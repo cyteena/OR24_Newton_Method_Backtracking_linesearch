@@ -202,6 +202,78 @@ def plot_training_metrics(train_losses, grad_norms, alpha, beta, max_iter):
     
     print(f"Training metrics plot saved to {filename}")
 
+
+import matplotlib.pyplot as plt
+import datetime
+import torch
+
+def test_backtracking_params(X_train, Y_train, X_val, Y_val, alphas, betas, max_iter=1000, tol=1e-6, gradient_end = True):
+    results = []
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Training on {device}")
+    X_train, Y_train = X_train.to(device), Y_train.to(device)
+    X_val, Y_val = X_val.to(device), Y_val.to(device)
+    print(f'X_train.shape={X_train.shape}, Y_train.shape={Y_train.shape}')
+
+    end_iter = None
+
+    for alpha in alphas:
+        for beta in betas:
+            train_losses = []
+            grad_norms = []
+            w = torch.zeros(X_train.shape[1], device=device)  # 初始化权重
+            for iter in range(max_iter):
+                loss, grad = logistic_loss_and_grad(w, X_train, Y_train)
+                print(f'grad.shape={grad.shape}')
+                train_losses.append(loss.item())
+                grad_norms.append(torch.norm(grad).item())
+
+                step_size = backtracking_line_search(w, grad, X_train, Y_train, alpha=alpha, beta=beta)
+                w_new = w - step_size * grad
+                if not gradient_end:
+                    if torch.norm(w_new - w) < tol:
+                        w = w_new
+                        end_iter = iter
+                        break
+                else: 
+                    if torch.norm(grad) < tol:
+                        w = w_new
+                        end_iter = iter
+                        break
+                w = w_new
+
+                if iter % 100 == 0:
+                    print(f'alpha={alpha}, beta={beta}, iter={iter}, loss={loss:.4f}')
+            if not end_iter:
+                end_iter = max_iter
+
+            results.append((alpha, beta, end_iter, train_losses, grad_norms))
+
+    # 绘制图像
+    plt.figure(figsize=(12, 6))
+    for alpha, beta, iter, train_losses, grad_norms in results:
+        plt.plot(train_losses, label=f'alpha={alpha}, beta={beta}, iter={iter}')
+    
+    plt.xlabel('Iteration')
+    plt.ylabel('Train Loss')
+    plt.title('Train Loss Over Iterations for Different Backtracking Parameters')
+    plt.legend()
+    
+    # 保存图表
+    current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"figure/backtracking_params_{current_time}.png"
+    plt.savefig(filename)
+    plt.close()
+    
+    print(f"Backtracking parameters plot saved to {filename}")
+
+
+# # 示例调用
+# alphas = [0.01, 0.1, 0.5]
+# betas = [0.1, 0.5, 0.9]
+# test_backtracking_params(X_train_split, Y_train_split, X_val_split, Y_val_split, alphas, betas)
+
 # # 示例调用
 # train_losses = []  # 假设这是训练过程中记录的损失值列表
 # grad_norms = []    # 假设这是训练过程中记录的梯度范数列表

@@ -1,5 +1,7 @@
 import torch
+import numpy as np
 from utils import save_results_to_json, plot_training_metrics, sigmoid, logistic_loss_and_grad, load_data, logistic_regression_backtracking
+from utils import test_backtracking_params
 
 # 设置设备为 GPU，如果可用的话
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -71,3 +73,7 @@ print(f"Validation Accuracy = {acc * 100:.2f}%")
 save_results_to_json(w = w, X_train=X_train_split, Y_train=Y_train_split, X_val=X_val_split, Y_val=Y_val_split, iterations = end_iter, filename = 'backtracking_gd_results.json')
 
 plot_training_metrics(train_losses, grad_norms, alpha, beta, max_iter)
+
+alphas = [0.01, 0.1, 0.5]
+betas = [0.1, 0.5, 0.9]
+test_backtracking_params(X_train_split, Y_train_split, X_val_split, Y_val_split, alphas, betas)
