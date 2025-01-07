@@ -46,7 +46,7 @@ def logistic_loss_and_grad(w, X, y, lam_regular = 0.05, short_cut = None):
 
     return loss, grad
 
-def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, gamma = 0.6, c = 0.5, short_cut = None, adaptive_c = True):
+def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, beta= 0.6, c = 0.5, short_cut = None, adaptive_c = False):
     """
     alpha_step: initial step size
     gamma: step size shrinkage factor (use this to find the smallest number t such that the Armijo condition is satisfied)
@@ -71,14 +71,14 @@ def backtracking_line_search(w , direction, X, y, alpha_step = 0.5, gamma = 0.6,
                 c *= 1.1
             if new_loss <= loss + c * t * torch.dot(direction, grad) or loss - new_loss > 0.0005:
                 break
-            t *= gamma
+            t *= beta
     
     else:
         while True:
             new_loss, _ = logistic_loss_and_grad(w + t * direction, X, y)
             if new_loss <= loss + c * t * torch.dot(direction, grad):
                 break
-            t *= gamma
+            t *= beta
 
     return t
 
@@ -105,7 +105,7 @@ def Newton_method_find_direction(w, X, y, grad, lam_regular = 0.05, exp_short_cu
     return -torch.linalg.solve(Hessian, grad)
 
 
-def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_regular = 0.05, c = 0.5, adaptive_c = False):
+def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, alpha = 0.4, beta = 0.8, lam_regular = 0.05, c = 0.5, adaptive_c = False, train_losses = [], grad_norms = []):
     """
     X: data matrix (num_samples, dim)
     y: label (num_samples,)
@@ -123,19 +123,29 @@ def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, lam_r
     """
     w = torch.zeros(X.shape[1], device = device, dtype = torch.float32)
     step_size = 0.5
+    end_iter = None
 
     for i in range(max_iter):
         short_cut = y_mulwise_Xw(w, X, y)
         loss, grad = logistic_loss_and_grad(w, X, y, lam_regular, short_cut=short_cut)
+        train_losses.append(loss.item())
+        grad_norms.append(torch.norm(grad).item())
+
         direction = Newton_method_find_direction(w, X, y, grad, lam_regular, exp_short_cut=torch.exp(short_cut))
-        step_size = backtracking_line_search(w, direction, X, y, short_cut=short_cut, alpha_step = step_size, c = c, adaptive_c=adaptive_c) # step_size find here garantee the Armijo condition (strictly decreasing)
+        step_size = backtracking_line_search(w, direction, X, y, short_cut=short_cut, alpha_step = alpha, beta = beta,c = c, adaptive_c=adaptive_c) # step_size find here garantee the Armijo condition (strictly decreasing)
         w_new = w + step_size * direction
 
         if torch.norm(w_new - w) < tol:
             w = w_new
+            end_iter = i
             break
 
         w = w_new
         print(f"Iter {i}, loss = {loss:.4f}")
+    
+    if not end_iter:
+        end_iter = max_iter - 1
+    
+    print(f'train_losses[:10]: {train_losses[:10]}')
 
-    return w
+    return w, end_iter
