@@ -2,7 +2,7 @@ from data_a9a_load import load_data
 import numpy as np
 import nbm_gpu as nbm
 import torch
-from utils import save_results_to_json, plot_training_metrics, test_backtracking_params
+from utils import save_results_to_json, plot_training_metrics, test_backtracking_params, sigmoid
 
 # 读取 a9a 数据
 file_name = 'a9a.txt'
@@ -12,7 +12,7 @@ batch_size = 32
 
 filepath = './' + file_name
 
-Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size,change_label = True)
+Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size, change_label = True)
 
 # 若是稀疏矩阵，需要转化为稠密矩阵
 if is_sparse:
@@ -51,7 +51,7 @@ grad_norms = []    # 假设这是训练过程中记录的梯度范数列表
 alpha = 0.4            # 假设这是超参数 alpha 的值
 beta = 0.8         # 假设这是超参数 beta 的值
 max_iter = 1000  # 假设这是最大迭代次数
-c = 0.1             # 假设这是Armjio常数 initial c = 2, newton method 一步结束
+c = 2             # 假设这是Armjio常数 initial c = 2, newton method 一步结束
 lam_regular = 1e-5  # 假设这是正则化系数
 
 

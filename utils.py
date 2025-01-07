@@ -15,7 +15,7 @@ def save_results_to_json(w, X_train, Y_train, X_val, Y_val, alpha, beta, lam_reg
     val_loss, _ = logistic_loss_and_grad(w, X_val, Y_val)
     
     # 计算验证集上的准确率
-    preds = sigmoid(X_val.matmul(w)) > 0.5
+    preds = X_val.matmul(w) > 0.5
     acc = torch.mean((preds == Y_val).float())
     
     # 准备结果字典

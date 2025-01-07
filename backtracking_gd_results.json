@@ -56,5 +56,45 @@
         "beta": 0.8,
         "lam_regular": 1e-05,
         "c": 0.1
+    },
+    {
+        "validation_accuracy": 23.579981923103333,
+        "iterations": 999,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.4,
+        "beta": 0.8,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 23.518574237823486,
+        "iterations": 999,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.4,
+        "beta": 0.8,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 7.460853457450867,
+        "iterations": 999,
+        "train_loss": 0.6931471228599548,
+        "val_loss": 0.6931470632553101,
+        "alpha": 0.4,
+        "beta": 0.8,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.03837943077087,
+        "iterations": 999,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.4,
+        "beta": 0.8,
+        "lam_regular": 1e-05,
+        "c": 2
     }
 ]
