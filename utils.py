@@ -86,7 +86,7 @@ import matplotlib.pyplot as plt
 import datetime
 import torch
 
-def test_backtracking_params(X_train, Y_train, X_val, Y_val, alphas, betas, cs, max_iter=1000, tol=1e-6, gradient_end = True):
+def test_backtracking_params(X_train, Y_train, X_val, Y_val, alphas, betas, cs, max_iter=1000, tol=1e-6, gradient_end = False):
     results = []
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -109,8 +109,8 @@ def test_backtracking_params(X_train, Y_train, X_val, Y_val, alphas, betas, cs, 
                     grad_norms.append(torch.norm(grad).item())
 
                     direction = Newton_method_find_direction(w=w, X=X_train, y=Y_train, grad=grad, lam_regular=1e-5)
-                    step_size = backtracking_line_search(w, direction, X_train, Y_train, alpha_step=alpha, beta=beta, c=c)
-                    w_new = w - step_size * grad
+                    step_size = backtracking_line_search(w, direction, X_train, Y_train, alpha_step=alpha, beta=beta, c=c, adaptive_c=False)
+                    w_new = w + step_size * direction
                     if not gradient_end:
                         if torch.norm(w_new - w) < tol:
                             w = w_new
@@ -125,15 +125,15 @@ def test_backtracking_params(X_train, Y_train, X_val, Y_val, alphas, betas, cs, 
 
                     if iter % 100 == 0:
                         print(f'alpha={alpha}, beta={beta}, c = {c}, iter={iter}, loss={loss:.4f}')
-                if not end_iter:
+                if end_iter is None:
                     end_iter = max_iter
 
             results.append((alpha, beta, c, end_iter, train_losses, grad_norms))
 
     # 绘制图像
     plt.figure(figsize=(12, 6))
-    for alpha, beta, c, iter, train_losses, grad_norms in results:
-        plt.plot(train_losses, label=f'alpha={alpha}, beta={beta}, c = {c}, iter={iter}')
+    for alpha, beta, c, end_iter, train_losses, grad_norms in results:
+        plt.plot(train_losses, label=f'alpha={alpha}, beta={beta}, c = {c}, end_iter={end_iter}')
     
     plt.xlabel('Iteration')
     plt.ylabel('Train Loss')
@@ -142,7 +142,7 @@ def test_backtracking_params(X_train, Y_train, X_val, Y_val, alphas, betas, cs, 
     
     # 保存图表
     current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"figure/backtracking_params_{current_time}.png"
+    filename = f"figure/backtracking_params_{current_time}_gradient_end{gradient_end}.png"
     plt.savefig(filename)
     plt.close()
     

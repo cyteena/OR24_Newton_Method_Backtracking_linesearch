@@ -137,13 +137,13 @@ def logistic_regression_newton_backtracking(X, y, max_iter=1000, tol=1e-6, alpha
 
         if torch.norm(w_new - w) < tol:
             w = w_new
-            end_iter = i
+            end_iter = i + 1
             break
 
         w = w_new
         print(f"Iter {i}, loss = {loss:.4f}")
     
-    if not end_iter:
+    if end_iter is None:
         end_iter = max_iter - 1
     
     print(f'train_losses[:10]: {train_losses[:10]}')

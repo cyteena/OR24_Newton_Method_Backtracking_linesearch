@@ -48,8 +48,8 @@ print("Data Loaded.")
 
 train_losses = []  # 假设这是训练过程中记录的损失值列表
 grad_norms = []    # 假设这是训练过程中记录的梯度范数列表
-alpha = 0.4            # 假设这是超参数 alpha 的值
-beta = 0.8         # 假设这是超参数 beta 的值
+alpha = 0.5            # 假设这是超参数 alpha 的值
+beta = 0.9         # 假设这是超参数 beta 的值
 max_iter = 1000  # 假设这是最大迭代次数
 c = 2             # 假设这是Armjio常数 initial c = 2, newton method 一步结束
 lam_regular = 1e-5  # 假设这是正则化系数
@@ -58,6 +58,7 @@ lam_regular = 1e-5  # 假设这是正则化系数
 # 训练
 print("Start Training (Backtracking Logistic Regression)...")
 w, end_iter = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=max_iter, tol=1e-6, lam_regular=lam_regular, c = c, adaptive_c = False, train_losses = train_losses, grad_norms=grad_norms)
+print(f'end_iter = {end_iter}')
 print(f'train_losses is None? {train_losses is None}')
 print(f'grad_norms is None? {grad_norms is None}')
 print("Training Completed.")
@@ -80,8 +81,8 @@ plot_training_metrics(train_losses = train_losses, grad_norms = grad_norms, alph
 
 
 max_iter = 200
-alphas = [0.01, 0.1, 0.5]
-betas = [0.1, 0.5, 0.9]
-cs = [0.1, 0.5, 1, 2]
-test_backtracking_params(X_train_split, Y_train_split, X_val_split, Y_val_split, alphas, betas, cs, max_iter = max_iter)
+alphas = [0.01, 0.5, 0.9]
+betas = [0.3, 0.5, 0.9]
+cs = [0.5, 1, 2]
+test_backtracking_params(X_train_split, Y_train_split, X_val_split, Y_val_split, alphas, betas, cs, max_iter = max_iter, gradient_end=False)
 

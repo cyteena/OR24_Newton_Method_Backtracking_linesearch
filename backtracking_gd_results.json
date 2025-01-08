@@ -96,5 +96,135 @@
         "beta": 0.8,
         "lam_regular": 1e-05,
         "c": 2
+    },
+    {
+        "validation_accuracy": 76.26650333404541,
+        "iterations": 999,
+        "train_loss": 0.6931471228599548,
+        "val_loss": 0.6931471824645996,
+        "alpha": 0.4,
+        "beta": 0.8,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.95946788787842,
+        "iterations": 999,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.95946788787842,
+        "iterations": 999,
+        "train_loss": 0.6931471228599548,
+        "val_loss": 0.6931470632553101,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 76.66563987731934,
+        "iterations": 0,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.56033134460449,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 76.48142576217651,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.8366584777832,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.25330185890198,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 76.0208785533905,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.6217360496521,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.406813621521,
+        "iterations": 1,
+        "train_loss": 0.6931471228599548,
+        "val_loss": 0.6931470632553101,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.4375159740448,
+        "iterations": 1,
+        "train_loss": 0.6931472420692444,
+        "val_loss": 0.6931472420692444,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
+    },
+    {
+        "validation_accuracy": 75.74455142021179,
+        "iterations": 1,
+        "train_loss": 0.6931471228599548,
+        "val_loss": 0.6931470632553101,
+        "alpha": 0.5,
+        "beta": 0.9,
+        "lam_regular": 1e-05,
+        "c": 2
     }
 ]
