@@ -2,7 +2,6 @@ from data_a9a_load import load_data
 import numpy as np
 import nbm_gpu as nbm
 import torch
-from utils import save_results_to_json, plot_training_metrics, test_backtracking_params, sigmoid
 
 # 读取 a9a 数据
 file_name = 'a9a.txt'
@@ -12,7 +11,7 @@ batch_size = 32
 
 filepath = './' + file_name
 
-Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size, change_label = True)
+Xtrain, Ylabel = load_data(filepath, feat, is_sparse, batch_size,change_label = True)
 
 # 若是稀疏矩阵，需要转化为稠密矩阵
 if is_sparse:
@@ -45,21 +44,28 @@ print(f"Sparsity of X_val: {torch.mean((X_val_split == 0).float()) * 100:.2f}%")
 print(f'Y_train[:10]: {Y_train_split[:10]}')
 print("Data Loaded.")
 
+# for lam_regular in [0.00005, 0.0005, 0.005, 0.05, 0.5]:
+#     print(f"Regularization Parameter: {lam_regular}")
+#     w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=lam_regular)
+#     val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
+#     print(f"Validation Loss = {val_loss:.4f}")
+#     preds = (X_val_split @ w) > 0.5
+#     acc = torch.mean((preds == Y_val_split).float())
+#     print(f"Validation Accuracy = {acc * 100:.2f}%")
 
-train_losses = []  # 假设这是训练过程中记录的损失值列表
-grad_norms = []    # 假设这是训练过程中记录的梯度范数列表
-alpha = 0.4            # 假设这是超参数 alpha 的值
-beta = 0.8         # 假设这是超参数 beta 的值
-max_iter = 1000  # 假设这是最大迭代次数
-c = 2             # 假设这是Armjio常数 initial c = 2, newton method 一步结束
-lam_regular = 1e-5  # 假设这是正则化系数
+# for c in np.linspace(0.3, 2.5, 10):
+#     print(f"Constant for Armijo Condition: {c}")
+#     w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=0.00005, c=c)
+#     val_loss, _ = nbm.logistic_loss_and_grad(w, X_val_split, Y_val_split)
+#     print(f"Validation Loss = {val_loss:.4f}")
+#     preds = (X_val_split @ w) > 0.5
+#     acc = torch.mean((preds == Y_val_split).float())
+#     print(f"Validation Accuracy = {acc * 100:.2f}%")
 
 
 # 训练
 print("Start Training (Backtracking Logistic Regression)...")
-w, end_iter = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=max_iter, tol=1e-6, lam_regular=lam_regular, c = c, adaptive_c = False, train_losses = train_losses, grad_norms=grad_norms)
-print(f'train_losses is None? {train_losses is None}')
-print(f'grad_norms is None? {grad_norms is None}')
+w = nbm.logistic_regression_newton_backtracking(X_train_split, Y_train_split, max_iter=1000, tol=1e-6, lam_regular=0.00005, c = 2, adaptive_c = False)
 print("Training Completed.")
 print("Learned Parameters:", w)
 
@@ -71,17 +77,4 @@ print(f"Validation Loss = {val_loss:.4f}")
 preds = (X_val_split @ w) > 0.5
 acc = torch.mean((preds == Y_val_split).float())
 print(f"Validation Accuracy = {acc * 100:.2f}%")
-
-save_results_to_json(w = w, X_train=X_train_split, Y_train=Y_train_split, X_val=X_val_split, Y_val=Y_val_split, alpha = alpha, beta = beta, lam_regular = lam_regular, c=c, iterations = end_iter, filename = 'backtracking_gd_results.json')
-
-print("train_losses:前五项", train_losses[:5],"grad_norms:前五项", grad_norms[:5])
-
-plot_training_metrics(train_losses = train_losses, grad_norms = grad_norms, alpha = alpha, beta = beta, c = c, max_iter = max_iter)
-
-
-max_iter = 200
-alphas = [0.01, 0.1, 0.5]
-betas = [0.1, 0.5, 0.9]
-cs = [0.1, 0.5, 1, 2]
-test_backtracking_params(X_train_split, Y_train_split, X_val_split, Y_val_split, alphas, betas, cs, max_iter = max_iter)
 
